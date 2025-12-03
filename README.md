@@ -1,6 +1,6 @@
 # RealRep: Generalized SDR-to-HDR Conversion via Attribute-Disentangled Representation Learning
 
-**Li Xu¹, Siqi Wang¹, Kepeng Xu¹✉️, Ling Zhang, Gang He¹, Weiran Wang¹, Yu-Wing Tai²**
+**Li Xu¹, Siqi Wang¹, Kepeng Xu¹✉️, Lin Zhang, Gang He¹, Weiran Wang¹, Yu-Wing Tai²**
 
 ¹Xidian University, ²Dartmouth College
 
