@@ -1,0 +1,97 @@
+import functools
+import torch.nn as nn
+import torch.nn.functional as F
+from .arch_util_hdrunet import *
+from .layers import (GlobalConditionBlock2,GlobalConditionBlock3,InputProj, CondProj, Downsample, Upsample, Fovea)
+from basicsr.utils.registry import ARCH_REGISTRY
+
+@ARCH_REGISTRY.register()
+class CUNet(nn.Module):
+
+    def __init__(self, in_nc=3, out_nc=3, nf=32, global_nf=64, spatial_nf=32, act_type='relu'):
+        super(CUNet, self).__init__()
+
+        self.conv_first = nn.Conv2d(in_nc, nf, 3, 1, 1)
+        
+        self.SFT_layer1g = SFTLayer(global_nf, nf, global_nf)
+        self.SFT_layer1 = SFTLayer()
+        self.HR_conv1 = nn.Conv2d(nf, nf, 3, 1, 1, bias=True)
+
+        self.down_conv1 = nn.Conv2d(nf, nf, 3, 2, 1)
+        self.down_conv2 = nn.Conv2d(nf, nf, 3, 2, 1)
+        
+        basic_block = functools.partial(ResBlock_with_SFT, nf=nf, global_nf=global_nf)
+        self.recon_trunk1 = make_layer(basic_block, 2)
+        self.recon_trunk2 = make_layer(basic_block, 8)
+        self.recon_trunk3 = make_layer(basic_block, 2)
+
+        self.up_conv1 = nn.Sequential(nn.Conv2d(nf, nf*4, 3, 1, 1), nn.PixelShuffle(2))
+        self.up_conv2 = nn.Sequential(nn.Conv2d(nf, nf*4, 3, 1, 1), nn.PixelShuffle(2))
+        
+        self.SFT_layer2g = SFTLayer(global_nf, nf, global_nf)
+        self.SFT_layer2 = SFTLayer()
+        self.HR_conv2 = nn.Conv2d(nf, nf, 3, 1, 1, bias=True)
+        self.conv_last = nn.Conv2d(nf, out_nc, 3, 1, 1, bias=True)
+
+        cond_in_nc=in_nc
+        self.Global_CondNet = GlobalConditionBlock3(cond_in_nc, global_nf)
+        
+        self.cond_first = nn.Sequential(nn.Conv2d(cond_in_nc, spatial_nf, 3, 1, 1), nn.LeakyReLU(0.1, True), 
+                                        nn.Conv2d(spatial_nf, spatial_nf, 1), nn.LeakyReLU(0.1, True), 
+                                        nn.Conv2d(spatial_nf, spatial_nf, 1), nn.LeakyReLU(0.1, True))
+        self.CondNet1 = nn.Sequential(nn.Conv2d(spatial_nf, spatial_nf, 1), nn.LeakyReLU(0.1, True), nn.Conv2d(spatial_nf, 32, 1))
+        self.CondNet2 = nn.Sequential(nn.Conv2d(spatial_nf, spatial_nf, 3, 2, 1), nn.LeakyReLU(0.1, True), nn.Conv2d(spatial_nf, 32, 1))
+        self.CondNet3 = nn.Sequential(nn.Conv2d(spatial_nf, spatial_nf, 3, 2, 1), nn.LeakyReLU(0.1, True), nn.Conv2d(spatial_nf, 32, 3, 2, 1))
+
+        self.mask_est = nn.Sequential(nn.Conv2d(in_nc, nf, 3, 1, 1), 
+                                      nn.ReLU(inplace=True), 
+                                      nn.Conv2d(nf, nf, 3, 1, 1),
+                                      nn.ReLU(inplace=True), 
+                                      nn.Conv2d(nf, nf, 1),
+                                      nn.ReLU(inplace=True), 
+                                      nn.Conv2d(nf, out_nc, 1),
+                                     )
+
+        # activation function
+        if act_type == 'relu':
+            self.act = nn.ReLU(inplace=True)
+        elif act_type == 'leakyrelu':
+            self.act = nn.LeakyReLU(negative_slope=0.1, inplace=True)
+
+    def forward(self, x, cond):
+        # x[0]: img; x[1]: cond
+        mask = self.mask_est(x)
+
+        cond = self.cond_first(x)   
+        cond1 = self.CondNet1(cond)
+        cond2 = self.CondNet2(cond)
+        cond3 = self.CondNet3(cond)
+        
+        gcond = self.Global_CondNet(x)
+
+        fea0 = self.act(self.conv_first(x))
+        
+        fea0 = self.SFT_layer1g(fea0, gcond)
+        fea0 = self.SFT_layer1(fea0, cond1)
+        fea0 = self.act(self.HR_conv1(fea0))
+
+        fea1 = self.act(self.down_conv1(fea0))
+        fea1, _, _ = self.recon_trunk1((fea1, gcond, cond2))
+
+        fea2 = self.act(self.down_conv2(fea1))
+        out, _, _ = self.recon_trunk2((fea2, gcond, cond3))
+        out = out + fea2
+        
+        # prompt 1
+        
+        out = self.act(self.up_conv1(out)) + fea1
+        out, _, _ = self.recon_trunk3((out, gcond, cond2))
+
+        out = self.act(self.up_conv2(out)) + fea0
+        out = self.SFT_layer2g(out, gcond)
+        out = self.SFT_layer2(out, cond1)
+        out = self.act(self.HR_conv2(out))
+
+        out = self.conv_last(out)
+        out = mask * x + out
+        return out

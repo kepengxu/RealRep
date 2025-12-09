@@ -1,0 +1,240 @@
+# CUDA_VISIBLE_DEVICES=0 nohup python train.py -opt options/train/A_mix/train_hyconditm_mix_prompt_contra_feat_noema_ITPContrast_UNet_onlyycbcr_flip_norm.yml >> train_HyCondITMfuse_mix_ema_contra_w2_hdrtvdm_2stage_feat_noema_itpContrast_UNet_relu_onlyycbcr_oldnet_w1w1_randflip_nounetk_bf16_normres_zero.log 2>&1 &
+# general settings
+name: fuse_f32g64s16_mix_contra_w2_hdrtvdm_2stage_feat_noema_ycbcrContrast_UNet_relu_onlyycbcr_oldnet_w1w1_randflip_fuse_nounetk_bf16_normres_zero
+model_type: ContrastYCBCRMidSupITMModel
+scale: 1
+num_gpu: 1  # set num_gpu: 0 for cpu mode
+gpu_ids: [0]
+manual_seed: 10
+use_bf16: true
+
+# dataset and data loader settings
+datasets:
+  train:
+    name: hdrmixtrain
+    type: HDRTVDMDATASETMIX_CONTRAST
+    dataset:
+      hdrtvdm1:
+        name: hdrtvdm1
+        root_dir: /root/autodl-tmp/HDRTV4K/trainwtiny.lmdb
+        sdrset: 1 # 1,2,3,4,5,6,7,8
+        io_backend:
+          type: lmdb
+      hdrtvdm2:
+        name: hdrtvdm2
+        root_dir: /root/autodl-tmp/HDRTV4K/trainwtiny.lmdb
+        sdrset: 2 # 1,2,3,4,5,6,7,8
+        io_backend:
+          type: lmdb
+      hdrtvdm3:
+        name: hdrtvdm3
+        root_dir: /root/autodl-tmp/HDRTV4K/trainwtiny.lmdb
+        sdrset: 3 # 1,2,3,4,5,6,7,8
+        io_backend:
+          type: lmdb
+      hdrtvdm4:
+        name: hdrtvdm4
+        root_dir: /root/autodl-tmp/HDRTV4K/trainwtiny.lmdb
+        sdrset: 4 # 1,2,3,4,5,6,7,8
+        io_backend:
+          type: lmdb
+      hdrtvdm5:
+        name: hdrtvdm5
+        root_dir: /root/autodl-tmp/HDRTV4K/trainwtiny.lmdb
+        sdrset: 5 # 1,2,3,4,5,6,7,8
+        io_backend:
+          type: lmdb
+      hdrtvdm6:
+        name: hdrtvdm6
+        root_dir: /root/autodl-tmp/HDRTV4K/trainwtiny.lmdb
+        sdrset: 6 # 1,2,3,4,5,6,7,8
+        io_backend:
+          type: lmdb
+      hdrtvdm7:
+        name: hdrtvdm7
+        root_dir: /root/autodl-tmp/HDRTV4K/trainwtiny.lmdb
+        sdrset: 7 # 1,2,3,4,5,6,7,8
+        io_backend:
+          type: lmdb
+      hdrtvdm8:
+        name: hdrtvdm8
+        root_dir: /root/autodl-tmp/HDRTV4K/trainwtiny.lmdb
+        sdrset: 8 # 1,2,3,4,5,6,7,8
+        io_backend:
+          type: lmdb
+
+    # (for lmdb)
+    # dataroot_gt: datasets/HDRTV1K/train/train_hdr_sub.lmdb
+    # dataroot_lq: datasets/HDRTV1K/train/train_sdr_sub.lmdb
+    filename_tmpl: '{}'
+    io_backend:
+      type: lmdb
+      # (for lmdb)
+      # type: lmdb
+
+    gt_size: false
+    use_hflip: false
+    use_rot: false
+
+    # data loader
+    use_shuffle: true
+    num_worker_per_gpu: 16
+    batch_size_per_gpu: 16
+    pin_memory: false
+    dataset_enlarge_ratio: 1
+    prefetch_mode: ~
+
+
+  val_hdrtv1k:
+    name: hdrtv1k
+    type: HDRTVDMDATASET_CONTRAST
+    root_dir: /root/autodl-tmp/HDRTV1K/test_set_ori.lmdb
+    sdrset: 1 # 1,2,3,4
+    io_backend:
+      type: lmdb
+  val_hdrtvdm1:
+    name: hdrtvdm1
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: /root/autodl-tmp/HDRTV4K/test/sample/test_sample.lmdb
+    sdrset: 1 # 1,2,3,4
+    io_backend:
+      type: lmdb
+  val_hdrtvdm2:
+    name: hdrtvdm2
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: /root/autodl-tmp/HDRTV4K/test/sample/test_sample.lmdb
+    sdrset: 2 # 1,2,3,4
+    io_backend:
+      type: lmdb
+  val_hdrtvdm3:
+    name: hdrtvdm3
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: /root/autodl-tmp/HDRTV4K/test/sample/test_sample.lmdb
+    sdrset: 3 # 1,2,3,4
+    io_backend:
+      type: lmdb
+  val_hdrtvdm4:
+    name: hdrtvdm4
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: /root/autodl-tmp/HDRTV4K/test/sample/test_sample.lmdb
+    sdrset: 4 # 1,2,3,4
+    io_backend:
+      type: lmdb
+  val_hdrtvdm5:
+    name: hdrtvdm5
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: /root/autodl-tmp/HDRTV4K/test/sample/test_sample.lmdb
+    sdrset: 5 # 1,2,3,4
+    io_backend:
+      type: lmdb
+  val_hdrtvdm6:
+    name: hdrtvdm6
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: /root/autodl-tmp/HDRTV4K/test/sample/test_sample.lmdb
+    sdrset: 6 # 1,2,3,4
+    io_backend:
+      type: lmdb
+  val_hdrtvdm7:
+    name: hdrtvdm7
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: /root/autodl-tmp/HDRTV4K/test/sample/test_sample.lmdb
+    sdrset: 7 # 1,2,3,4
+    io_backend:
+      type: lmdb
+  val_hdrtvdm8:
+    name: hdrtvdm8
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: /root/autodl-tmp/HDRTV4K/test/sample/test_sample.lmdb
+    sdrset: 8 # 1,2,3,4
+    io_backend:
+      type: lmdb
+
+
+# network structures
+network_g:
+  type: RealRep_fuse_norm_contra
+  in_channels: 3
+  transform_channels: 32
+  global_cond_channels: 64
+  spatial_cond_channels: 16
+
+# path
+path:
+  pretrain_network_g: 
+  strict_load_g: true
+  resume_state: 
+  # param_key_g: params
+
+# training settings
+train:
+  use_bf16: true
+  ema_decay: 0.999
+  optim_g:
+    type: Adam
+    lr: !!float 2e-4
+    weight_decay: 0
+    betas: [0.9, 0.99]
+
+  scheduler:
+    type: MultiStepLR
+    milestones: [200000, 400000]
+    gamma: 0.5
+
+  total_iter: 400000
+  stage1_iters: 40000
+  warmup_iter: -1  # no warm up
+
+  # losses
+  pixel_opt:
+    type: L1Loss
+    loss_weight: 1.0
+    reduction: mean
+  
+  # color_opt:
+  #   type: DeltaEITPLoss
+  #   loss_weight: 0.7
+  #   mode: pixelwise  # spatial
+    
+  contra_opt:
+    loss_weight: 0.2
+    loss_weight_global: 1.0
+    loss_weight_local: 1.0
+
+  mid_sup_opt:
+
+    pixel_opt:
+      type: L1Loss
+      loss_weight: 0.7
+      reduction: mean
+    
+    # color_opt:
+    #   type: HistogramLoss
+    #   loss_weight: 0.5
+    #   h_sz: 64
+    #   img_sz: 160
+
+# validation settings
+val:
+  val_freq: !!float 5e4
+  save_img: false
+
+  metrics:
+    psnr: # metric name, can be arbitrary
+      type: calculate_psnr
+      crop_border: 0
+      test_y_channel: false
+      bit_depth: 16
+
+# logging settings
+logger:
+  print_freq: 100
+  save_checkpoint_freq: !!float 5e3
+  use_tb_logger: true
+  wandb:
+    project: ~
+    resume_id: ~
+
+# dist training settings
+dist_params:
+  backend: nccl
+  port: 29500

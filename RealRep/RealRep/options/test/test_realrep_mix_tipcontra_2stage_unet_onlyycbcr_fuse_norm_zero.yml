@@ -1,0 +1,111 @@
+# CUDA_VISIBLE_DEVICES=0 nohup python test.py -opt options/test/test_realrep_mix_tipcontra_2stage_unet_onlyycbcr_fuse_norm_zero.yml >> test_hyconditm_mix_contra_c64_w2_hdrtvdm_2stage_feat_UNet_relu_HyCondITM_contra_w1w1_randflip_fuse_bf16_norm_zero2.log 2>&1 &
+name: fuse_mix_contra_prompt_w2_hdrtvdm_2stage_feat_noema_itpContrast_UNet_relu_HyCondITMv1_base_contra_w1w1_randflip_fuse_nounetk_norm_zero
+model_type: ContrastYCBCRMidSupITMModel
+scale: 1
+num_gpu: 1  # set num_gpu: 0 for cpu mode
+gpu_ids: [0]
+manual_seed: 10
+
+datasets:
+  test_1:  # the 1st test dataset
+    name: hdrtv1k
+    type: HDRTVDMDATASET_CONTRAST
+    root_dir: /data/disk1/wsq/data/HDRTV1K/test_set_ori.lmdb
+    sdrset: 1 # 1,2,3,4
+    io_backend:
+      type: lmdb
+  test_2:  # the 2nd test dataset
+    name: hdrtvdm1
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: /data/disk1/wsq/data/HDRTV4K/test/test.lmdb
+    sdrset: 1 # 1,2,3,4
+    io_backend:
+      type: lmdb
+  test_3:
+    name: hdrtvdm2
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: /data/disk1/wsq/data/HDRTV4K/test/test.lmdb
+    sdrset: 2 # 1,2,3,4
+    io_backend:
+      type: lmdb
+  test_4:
+    name: hdrtvdm3
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: /data/disk1/wsq/data/HDRTV4K/test/test.lmdb
+    sdrset: 3 # 1,2,3,4
+    io_backend:
+      type: lmdb
+  test_5:
+    name: hdrtvdm4
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: /data/disk1/wsq/data/HDRTV4K/test/test.lmdb
+    sdrset: 4 # 1,2,3,4
+    io_backend:
+      type: lmdb
+  test_6:
+    name: hdrtvdm5
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: /data/disk1/wsq/data/HDRTV4K/test/test.lmdb
+    sdrset: 5 # 1,2,3,4
+    io_backend:
+      type: lmdb
+  test_7:
+    name: hdrtvdm6
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: /data/disk1/wsq/data/HDRTV4K/test/test.lmdb
+    sdrset: 6 # 1,2,3,4
+    io_backend:
+      type: lmdb
+  test_8:
+    name: hdrtvdm7
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: /data/disk1/wsq/data/HDRTV4K/test/test.lmdb
+    sdrset: 7 # 1,2,3,4
+    io_backend:
+      type: lmdb
+  test_9:
+    name: hdrtvdm8
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: /data/disk1/wsq/data/HDRTV4K/test/test.lmdb
+    sdrset: 8 # 1,2,3,4
+    io_backend:
+      type: lmdb
+
+# network structures
+network_g:
+  type: RealRep_fuse_norm_contra
+  in_channels: 3
+  transform_channels: 32
+  global_cond_channels: 64
+  spatial_cond_channels: 16
+
+
+# path
+path:
+  pretrain_network_g: ../experiments/HyCondITMfuse_f32g64s16_mix_contra_w2_hdrtvdm_2stage_feat_noema_ycbcrContrast_UNet_relu_onlyycbcr_oldnet_w1w1_randflip_fuse_nounetk_bf16_normres_zero/models/net_g_latest.pth
+  strict_load_g: true
+  param_key_g: params_ema
+  param_key_feat_I: feat_params_I
+  param_key_feat_TP: feat_params_TP
+
+# validation settings
+val:
+  save_img: false
+  suffix: ~  # add suffix to saved images, if None, use exp name
+  pbar: true
+
+  metrics:
+    psnr: # metric name, can be arbitrary
+      type: calculate_psnr
+      crop_border: 0
+      test_y_channel: false
+      bit_depth: 16
+    ssim:
+      type: calculate_ssim
+      crop_border: 0
+      test_y_channel: false
+      bit_depth: 16
+    delta_e_itp:
+      type: calculate_delta_e_itp
+      crop_border: 0
+      relative: false
