@@ -11,7 +11,7 @@
 ---
 
 ## 📢 News
-* **[2026/02]** We are preparing the code and pretrained models. They will be released soon! 🚀
+* **[2025/12]** We are prepared the code and pretrained models. The Code have been released! 🚀
 * **[2025/12]** This paper has been accepted by **AAAI 2026** as an **Oral Presentation**! 🎉
 
 ## 🏠 Abstract
