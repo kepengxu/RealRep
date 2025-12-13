@@ -1,4 +1,4 @@
-# HyCondITM
+# RealRep
 
 Code for paper *[RealRep: Generalized SDR-to-HDR Conversion via Attribute-Disentangled Representation Learning](https://arxiv.org/abs/2505.07322)*.
 
