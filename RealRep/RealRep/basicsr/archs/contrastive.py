@@ -95,83 +95,34 @@ class MoCo(nn.Module):
         ):
             param_k.data = param_k.data * self.m + param_q.data * (1.0 - self.m)
     def forward(self, im_q, im_k, im_negs):
-        """
-        输入:
-            im_q: 查询图像的批次
-            im_k: 关键图像的批次
-            im_negs: 负样本图像的批次
-        输出:
-            logits, targets
-        """
-        # 提取负样本图像的形状信息，用于后续处理
+
         b, n_neg, c, h, w = im_negs.shape
-        # 编码查询图像以获取其特征和归一化向量
         q, q_feat = self.encoder_q(im_q)
-        # 获取查询特征的形状，以计算特征的分辨率
         _, fc, fh, fw = q_feat.shape  
-        # 归一化查询向量
         q = nn.functional.normalize(q, dim=1)
         
-        # 使用动量更新方法更新关键编码器参数，并处理负样本图像
         with torch.no_grad():
             self._momentum_update_key_encoder()
             im_negs = im_negs.view(b * n_neg, c, h, w).contiguous()
-            # 将关键图像和负样本图像拼接后通过关键编码器获取特征
             _, kn_feat = self.encoder_k(torch.cat([im_k, im_negs], dim=0))  # [b + b*n_neg, c, h, w]
             kn_feat = nn.functional.normalize(kn_feat, dim=1)
             k_feat = kn_feat[:b]
-            # 重塑负样本特征的形状
             neg_feat = kn_feat[b:].view(b, n_neg, fc, fh, fw).contiguous()  # [b, n_neg, c, h, w]
 
-        # 重塑查询特征、关键特征和负样本特征的形状
         q_feat = q_feat.view(b, fc * fh * fw).contiguous()
         k_feat = k_feat.view(b, fc * fh * fw).contiguous()
         neg_feat = neg_feat.view(b, n_neg, fc * fh * fw).contiguous()
         
-        # 计算正样本和负样本的相似度得分
         l_pos = (q_feat * k_feat).sum(dim=-1, keepdims=True) / (fh * fw)
         l_neg = (q_feat.unsqueeze(1) * neg_feat).sum(dim=-1) / (fh * fw)
         
-        # 合并正样本和负样本的相似度得分
         logits = torch.cat([l_pos, l_neg], dim=1)
-        # 应用温度参数
+
         logits /= self.temperature
-        # 生成标签，指示正样本的位置
+
         labels = torch.zeros(logits.shape[0], dtype=torch.long).cuda()
         
         return logits, labels, q
-    # def forward(self, im_q, im_k, im_negs):
-    #     """
-    #     Input:
-    #         im_q: a batch of query images
-    #         im_k: a batch of key images
-    #     Output:
-    #         logits, targets
-    #     """
-    #     b, n_neg, c, h, w = im_negs.shape
-    #     q, q_feat = self.encoder_q(im_q)
-    #     _, fc, fh, fw = q_feat.shape  # resolution of features
-    #     q = nn.functional.normalize(q, dim=1)
-    #     with torch.no_grad():
-    #         self._momentum_update_key_encoder()
-    #         im_negs = im_negs.view(b*n_neg, c, h, w).contiguous()
-    #         _, kn_feat = self.encoder_k(torch.cat([im_k, im_negs], dim=0))  # [b + b*n_neg, c, h, w]
-    #         kn_feat = nn.functional.normalize(kn_feat, dim=1)
-    #         k_feat = kn_feat[:b]
-    #         neg_feat = kn_feat[b:].view(b, n_neg, fc, fh, fw).contiguous()  # [b, n_neg, c, h, w]
-
-    #     q_feat = q_feat.view(b, fc*fh*fw).contiguous()
-    #     k_feat = k_feat.view(b, fc*fh*fw).contiguous()
-    #     neg_feat = neg_feat.view(b, n_neg, fc*fh*fw).contiguous()
-    #     l_pos = (q_feat * k_feat).sum(dim=-1, keepdims=True) / (fh*fw)
-    #     l_neg = (q_feat.unsqueeze(1) * neg_feat).sum(dim=-1) / (fh*fw)
-    #     # logits: Nx(1+K)
-    #     logits = torch.cat([l_pos, l_neg], dim=1)
-    #     # apply temperature
-    #     logits /= self.temperature
-    #     # labels: positive key indicators
-    #     labels = torch.zeros(logits.shape[0], dtype=torch.long).cuda()
-    #     return logits, labels, q
     
 class projection(nn.Module):
     """MLP projection head."""
@@ -286,14 +237,6 @@ class MoCoV2(nn.Module):
             param_k.data = param_k.data * self.m + param_q.data * (1.0 - self.m)
 
     def forward(self, im_q, im_k, im_negs):
-        """
-        输入:
-            im_q: 查询图像的批次
-            im_k: 关键图像的批次
-            im_negs: 负样本图像的批次
-        输出:
-            logits, targets
-        """
         b, n_neg, c, h, w = im_negs.shape
         q, q_proj = self.encoder_q(im_q)  # Main task feature and contrastive projection
         _, fc = q_proj.shape  # Projection dimension
@@ -413,14 +356,6 @@ class MoCoV2_Post(nn.Module):
             param_k.data = param_k.data * self.m + param_q.data * (1.0 - self.m)
 
     def forward(self, im_q, im_k, im_negs):
-        """
-        输入:
-            im_q: 查询图像的批次
-            im_k: 关键图像的批次
-            im_negs: 负样本图像的批次
-        输出:
-            logits, targets
-        """
         mask = thresholder(im_negs, 0.92) # M_sat
         gt_edges = kornia.filters.sobel(im_k, normalized=False) # M_edge    
         dilated_gt_edges = dilator(gt_edges, self.kernel)
@@ -526,10 +461,8 @@ class MoCoWithUNet(nn.Module):
         self.m = m
         self.temperature = temperature
 
-        # 初始化动量更新
         self._initialize_momentum()
 
-        # 投影头（查询编码器）
         self.global_proj_q = nn.Sequential(
             nn.Linear(global_cond_channels, global_cond_channels),
             nn.ReLU(inplace=True),
@@ -541,7 +474,6 @@ class MoCoWithUNet(nn.Module):
             nn.Conv2d(spatial_cond_channels, spatial_cond_channels, 1),
         )
 
-        # 投影头（关键编码器）
         self.global_proj_k = nn.Sequential(
             nn.Linear(global_cond_channels, global_cond_channels),
             nn.ReLU(inplace=True),
@@ -553,21 +485,14 @@ class MoCoWithUNet(nn.Module):
             nn.Conv2d(spatial_cond_channels, spatial_cond_channels, 1),
         )
         
-        # 初始化关键编码器的投影头
         self._initialize_momentum_projs()
 
     def _initialize_momentum(self):
-        """
-        初始化关键编码器（unet_k）的参数，使其与查询编码器（unet_q）相同，并且不参与梯度更新
-        """
         for param_q, param_k in zip(self.unet_q.parameters(), self.unet_k.parameters()):
             param_k.data.copy_(param_q.data)
             param_k.requires_grad = False
 
     def _initialize_momentum_projs(self):
-        """
-        初始化关键编码器的投影头（proj_k）的参数，使其与查询编码器的投影头（proj_q）相同，并且不参与梯度更新
-        """
         for param_q, param_k in zip(self.global_proj_q.parameters(), self.global_proj_k.parameters()):
             param_k.data.copy_(param_q.data)
             param_k.requires_grad = False
@@ -578,38 +503,23 @@ class MoCoWithUNet(nn.Module):
 
     @torch.no_grad()
     def _momentum_update_key_encoder(self):
-        """
-        动量更新关键编码器及其投影头
-        """
-        # 更新 unet_k
         for param_q, param_k in zip(self.unet_q.parameters(), self.unet_k.parameters()):
             param_k.data = self.m * param_k.data + (1 - self.m) * param_q.data
         
-        # 更新 global_proj_k
         for param_q, param_k in zip(self.global_proj_q.parameters(), self.global_proj_k.parameters()):
             param_k.data = self.m * param_k.data + (1 - self.m) * param_q.data
         
-        # 更新 local_proj_k
         for param_q, param_k in zip(self.local_proj_q.parameters(), self.local_proj_k.parameters()):
             param_k.data = self.m * param_k.data + (1 - self.m) * param_q.data
 
     @torch.no_grad()
     def reset_unet_k(self):
-        """
-        完全重新初始化关键编码器（unet_k），使其回到初始的随机初始化状态。
-        不涉及投影头的重新初始化。
-        """
-        # 重新初始化 unet_k
         self.unet_k.apply(self._init_module)
         
-        # 确保关键编码器参数不需要梯度
         for param_k in self.unet_k.parameters():
             param_k.requires_grad = False
             
     def _init_module(self, module):
-        """
-        初始化模块的参数。根据需要调整初始化方法。
-        """
         if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear):
             nn.init.kaiming_normal_(module.weight, mode='fan_out', nonlinearity='relu')
             if module.bias is not None:
@@ -621,7 +531,6 @@ class MoCoWithUNet(nn.Module):
     def forward(self, im_q, im_k, im_negs, mode='I'):
         b, n_neg, c, h, w = im_negs.shape
 
-        # 查询编码器
         z_q_0, y_q_0 = self.unet_q(im_q)
         z_q = self.global_proj_q(z_q_0.squeeze(-1).squeeze(-1))
         z_q = F.normalize(z_q, dim=1) # b,c
@@ -631,14 +540,12 @@ class MoCoWithUNet(nn.Module):
         with torch.no_grad():
             self._momentum_update_key_encoder()
 
-            # 关键编码器
             z_k, y_k = self.unet_k(im_k)
             z_k = self.global_proj_k(z_k.squeeze(-1).squeeze(-1))
             z_k = F.normalize(z_k, dim=1) # b,c
             y_k = self.local_proj_k(y_k)
             y_k = F.normalize(y_k, dim=1) # b,c,h,w
 
-            # 负样本
             im_negs = im_negs.view(b * n_neg, c, h, w)
             z_negs, y_negs = self.unet_k(im_negs)
             z_negs = self.global_proj_k(z_negs.squeeze(-1).squeeze(-1))  # 全局负样本
@@ -648,13 +555,11 @@ class MoCoWithUNet(nn.Module):
             y_negs = F.normalize(y_negs, dim=1)
             y_negs = y_negs.view(b, n_neg, *y_negs.shape[1:])
 
-        # 全局对比损失
         l_pos_global = (z_q * z_k).sum(dim=-1, keepdim=True)
         l_neg_global = torch.einsum('bd,bnd->bn', z_q, z_negs)
         logits_global = torch.cat([l_pos_global, l_neg_global], dim=1) / self.temperature
         labels_global = torch.zeros(logits_global.size(0), dtype=torch.long).cuda()
 
-        # 局部对比损失
         l_pos_local = (y_q * y_k).mean(dim=(1, 2, 3)).unsqueeze(-1)
         l_neg_local = torch.einsum('bchw,bnchw->bn', y_q, y_negs) / (h * w)
         logits_local = torch.cat([l_pos_local, l_neg_local], dim=1) / self.temperature
@@ -672,10 +577,8 @@ class MoCoWithUNet_woglobal(nn.Module):
         self.m = m
         self.temperature = temperature
 
-        # 初始化动量更新
         self._initialize_momentum()
 
-        # 投影头（查询编码器）
         # self.global_proj_q = nn.Sequential(
         #     nn.Linear(global_cond_channels, global_cond_channels),
         #     nn.ReLU(inplace=True),
@@ -687,7 +590,6 @@ class MoCoWithUNet_woglobal(nn.Module):
             nn.Conv2d(spatial_cond_channels, spatial_cond_channels, 1),
         )
 
-        # 投影头（关键编码器）
         # self.global_proj_k = nn.Sequential(
         #     nn.Linear(global_cond_channels, global_cond_channels),
         #     nn.ReLU(inplace=True),
@@ -699,21 +601,14 @@ class MoCoWithUNet_woglobal(nn.Module):
             nn.Conv2d(spatial_cond_channels, spatial_cond_channels, 1),
         )
         
-        # 初始化关键编码器的投影头
         self._initialize_momentum_projs()
 
     def _initialize_momentum(self):
-        """
-        初始化关键编码器（unet_k）的参数，使其与查询编码器（unet_q）相同，并且不参与梯度更新
-        """
         for param_q, param_k in zip(self.unet_q.parameters(), self.unet_k.parameters()):
             param_k.data.copy_(param_q.data)
             param_k.requires_grad = False
 
     def _initialize_momentum_projs(self):
-        """
-        初始化关键编码器的投影头（proj_k）的参数，使其与查询编码器的投影头（proj_q）相同，并且不参与梯度更新
-        """
         # for param_q, param_k in zip(self.global_proj_q.parameters(), self.global_proj_k.parameters()):
         #     param_k.data.copy_(param_q.data)
         #     param_k.requires_grad = False
@@ -724,38 +619,23 @@ class MoCoWithUNet_woglobal(nn.Module):
 
     @torch.no_grad()
     def _momentum_update_key_encoder(self):
-        """
-        动量更新关键编码器及其投影头
-        """
-        # 更新 unet_k
         for param_q, param_k in zip(self.unet_q.parameters(), self.unet_k.parameters()):
             param_k.data = self.m * param_k.data + (1 - self.m) * param_q.data
         
-        # 更新 global_proj_k
         # for param_q, param_k in zip(self.global_proj_q.parameters(), self.global_proj_k.parameters()):
         #     param_k.data = self.m * param_k.data + (1 - self.m) * param_q.data
         
-        # 更新 local_proj_k
         for param_q, param_k in zip(self.local_proj_q.parameters(), self.local_proj_k.parameters()):
             param_k.data = self.m * param_k.data + (1 - self.m) * param_q.data
 
     @torch.no_grad()
     def reset_unet_k(self):
-        """
-        完全重新初始化关键编码器（unet_k），使其回到初始的随机初始化状态。
-        不涉及投影头的重新初始化。
-        """
-        # 重新初始化 unet_k
         self.unet_k.apply(self._init_module)
         
-        # 确保关键编码器参数不需要梯度
         for param_k in self.unet_k.parameters():
             param_k.requires_grad = False
             
     def _init_module(self, module):
-        """
-        初始化模块的参数。根据需要调整初始化方法。
-        """
         if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear):
             nn.init.kaiming_normal_(module.weight, mode='fan_out', nonlinearity='relu')
             if module.bias is not None:
@@ -767,7 +647,6 @@ class MoCoWithUNet_woglobal(nn.Module):
     def forward(self, im_q, im_k, im_negs):
         b, n_neg, c, h, w = im_negs.shape
 
-        # 查询编码器
         y_q_0 = self.unet_q(im_q)
         # z_q = self.global_proj_q(z_q_0.squeeze(-1).squeeze(-1))
         # z_q = F.normalize(z_q, dim=1) # b,c
@@ -777,14 +656,12 @@ class MoCoWithUNet_woglobal(nn.Module):
         with torch.no_grad():
             self._momentum_update_key_encoder()
 
-            # 关键编码器
             y_k = self.unet_k(im_k)
             # z_k = self.global_proj_k(z_k.squeeze(-1).squeeze(-1))
             # z_k = F.normalize(z_k, dim=1) # b,c
             y_k = self.local_proj_k(y_k)
             y_k = F.normalize(y_k, dim=1) # b,c,h,w
 
-            # 负样本
             im_negs = im_negs.view(b * n_neg, c, h, w)
             y_negs = self.unet_k(im_negs)
             # z_negs = self.global_proj_k(z_negs.squeeze(-1).squeeze(-1))  # 全局负样本
@@ -794,13 +671,11 @@ class MoCoWithUNet_woglobal(nn.Module):
             y_negs = F.normalize(y_negs, dim=1)
             y_negs = y_negs.view(b, n_neg, *y_negs.shape[1:])
 
-        # # 全局对比损失
         # l_pos_global = (z_q * z_k).sum(dim=-1, keepdim=True)
         # l_neg_global = torch.einsum('bd,bnd->bn', z_q, z_negs)
         # logits_global = torch.cat([l_pos_global, l_neg_global], dim=1) / self.temperature
         # labels_global = torch.zeros(logits_global.size(0), dtype=torch.long).cuda()
 
-        # 局部对比损失
         l_pos_local = (y_q * y_k).mean(dim=(1, 2, 3)).unsqueeze(-1)
         l_neg_local = torch.einsum('bchw,bnchw->bn', y_q, y_negs) / (h * w)
         logits_local = torch.cat([l_pos_local, l_neg_local], dim=1) / self.temperature
@@ -818,10 +693,8 @@ class MoCoWithUNet_wolocal(nn.Module):
         self.m = m
         self.temperature = temperature
 
-        # 初始化动量更新
         self._initialize_momentum()
 
-        # 投影头（查询编码器）
         self.global_proj_q = nn.Sequential(
             nn.Linear(global_cond_channels, global_cond_channels),
             nn.ReLU(inplace=True),
@@ -833,7 +706,6 @@ class MoCoWithUNet_wolocal(nn.Module):
         #     nn.Conv2d(spatial_cond_channels, spatial_cond_channels, 1),
         # )
 
-        # 投影头（关键编码器）
         self.global_proj_k = nn.Sequential(
             nn.Linear(global_cond_channels, global_cond_channels),
             nn.ReLU(inplace=True),
@@ -845,21 +717,14 @@ class MoCoWithUNet_wolocal(nn.Module):
         #     nn.Conv2d(spatial_cond_channels, spatial_cond_channels, 1),
         # )
         
-        # 初始化关键编码器的投影头
         self._initialize_momentum_projs()
 
     def _initialize_momentum(self):
-        """
-        初始化关键编码器（unet_k）的参数，使其与查询编码器（unet_q）相同，并且不参与梯度更新
-        """
         for param_q, param_k in zip(self.unet_q.parameters(), self.unet_k.parameters()):
             param_k.data.copy_(param_q.data)
             param_k.requires_grad = False
 
     def _initialize_momentum_projs(self):
-        """
-        初始化关键编码器的投影头（proj_k）的参数，使其与查询编码器的投影头（proj_q）相同，并且不参与梯度更新
-        """
         for param_q, param_k in zip(self.global_proj_q.parameters(), self.global_proj_k.parameters()):
             param_k.data.copy_(param_q.data)
             param_k.requires_grad = False
@@ -870,38 +735,23 @@ class MoCoWithUNet_wolocal(nn.Module):
 
     @torch.no_grad()
     def _momentum_update_key_encoder(self):
-        """
-        动量更新关键编码器及其投影头
-        """
-        # 更新 unet_k
         for param_q, param_k in zip(self.unet_q.parameters(), self.unet_k.parameters()):
             param_k.data = self.m * param_k.data + (1 - self.m) * param_q.data
         
-        # 更新 global_proj_k
         for param_q, param_k in zip(self.global_proj_q.parameters(), self.global_proj_k.parameters()):
             param_k.data = self.m * param_k.data + (1 - self.m) * param_q.data
         
-        # 更新 local_proj_k
         # for param_q, param_k in zip(self.local_proj_q.parameters(), self.local_proj_k.parameters()):
         #     param_k.data = self.m * param_k.data + (1 - self.m) * param_q.data
 
     @torch.no_grad()
     def reset_unet_k(self):
-        """
-        完全重新初始化关键编码器（unet_k），使其回到初始的随机初始化状态。
-        不涉及投影头的重新初始化。
-        """
-        # 重新初始化 unet_k
         self.unet_k.apply(self._init_module)
         
-        # 确保关键编码器参数不需要梯度
         for param_k in self.unet_k.parameters():
             param_k.requires_grad = False
             
     def _init_module(self, module):
-        """
-        初始化模块的参数。根据需要调整初始化方法。
-        """
         if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear):
             nn.init.kaiming_normal_(module.weight, mode='fan_out', nonlinearity='relu')
             if module.bias is not None:
@@ -913,7 +763,6 @@ class MoCoWithUNet_wolocal(nn.Module):
     def forward(self, im_q, im_k, im_negs):
         b, n_neg, c, h, w = im_negs.shape
 
-        # 查询编码器
         z_q_0 = self.unet_q(im_q)
         z_q = self.global_proj_q(z_q_0.squeeze(-1).squeeze(-1))
         z_q = F.normalize(z_q, dim=1) # b,c
@@ -923,30 +772,26 @@ class MoCoWithUNet_wolocal(nn.Module):
         with torch.no_grad():
             self._momentum_update_key_encoder()
 
-            # 关键编码器
             z_k = self.unet_k(im_k)
             z_k = self.global_proj_k(z_k.squeeze(-1).squeeze(-1))
             z_k = F.normalize(z_k, dim=1) # b,c
             # y_k = self.local_proj_k(y_k)
             # y_k = F.normalize(y_k, dim=1) # b,c,h,w
 
-            # 负样本
             im_negs = im_negs.view(b * n_neg, c, h, w)
             z_negs = self.unet_k(im_negs)
-            z_negs = self.global_proj_k(z_negs.squeeze(-1).squeeze(-1))  # 全局负样本
+            z_negs = self.global_proj_k(z_negs.squeeze(-1).squeeze(-1)) 
             z_negs = F.normalize(z_negs, dim=1)
             z_negs = z_negs.view(b, n_neg, -1)
             # y_negs = self.local_proj_k(y_negs)
             # y_negs = F.normalize(y_negs, dim=1)
             # y_negs = y_negs.view(b, n_neg, *y_negs.shape[1:])
 
-        # 全局对比损失
         l_pos_global = (z_q * z_k).sum(dim=-1, keepdim=True)
         l_neg_global = torch.einsum('bd,bnd->bn', z_q, z_negs)
         logits_global = torch.cat([l_pos_global, l_neg_global], dim=1) / self.temperature
         labels_global = torch.zeros(logits_global.size(0), dtype=torch.long).cuda()
 
-        # # 局部对比损失
         # l_pos_local = (y_q * y_k).mean(dim=(1, 2, 3)).unsqueeze(-1)
         # l_neg_local = torch.einsum('bchw,bnchw->bn', y_q, y_negs) / (h * w)
         # logits_local = torch.cat([l_pos_local, l_neg_local], dim=1) / self.temperature
@@ -964,12 +809,10 @@ class MoCoWithUNet_wolocal(nn.Module):
 #         self.m = m
 #         self.temperature = temperature
 
-#         # 初始化动量更新
 #         for param_q, param_k in zip(self.unet_q.parameters(), self.unet_k.parameters()):
 #             param_k.data.copy_(param_q.data)
 #             param_k.requires_grad = False
 
-#         # 投影头（查询编码器）
 #         self.global_proj_q = nn.Sequential(
 #             nn.Linear(global_cond_channels, global_cond_channels),
 #             nn.ReLU(inplace=True),
@@ -981,7 +824,6 @@ class MoCoWithUNet_wolocal(nn.Module):
 #             nn.Conv2d(spatial_cond_channels, spatial_cond_channels, 1),
 #         )
 
-#         # 投影头（关键编码器）
 #         self.global_proj_k = nn.Sequential(
 #             nn.Linear(global_cond_channels, global_cond_channels),
 #             nn.ReLU(inplace=True),
@@ -995,16 +837,12 @@ class MoCoWithUNet_wolocal(nn.Module):
 
 #     @torch.no_grad()
 #     def _momentum_update_key_encoder(self):
-#         """
-#         动量更新关键编码器
-#         """
 #         for param_q, param_k in zip(self.unet_q.parameters(), self.unet_k.parameters()):
 #             param_k.data = self.m * param_k.data + (1 - self.m) * param_q.data
 
 #     def forward(self, im_q, im_k, im_negs):
 #         b, n_neg, c, h, w = im_negs.shape
 
-#         # 查询编码器
 #         z_q_0, y_q_0 = self.unet_q(im_q)
 #         z_q = self.global_proj_q(z_q_0.squeeze(-1).squeeze(-1))
 #         z_q = F.normalize(z_q, dim=1) # b,c
@@ -1014,14 +852,12 @@ class MoCoWithUNet_wolocal(nn.Module):
 #         with torch.no_grad():
 #             self._momentum_update_key_encoder()
 
-#             # 关键编码器
 #             z_k, y_k = self.unet_k(im_k)
 #             z_k = self.global_proj_k(z_k.squeeze(-1).squeeze(-1))
 #             z_k = F.normalize(z_k, dim=1) # b,c
 #             y_k = self.local_proj_k(y_k)
 #             y_k = F.normalize(y_k, dim=1) # b,c,h,w
 
-#             # 负样本
 #             im_negs = im_negs.view(b * n_neg, c, h, w)
 #             z_negs, y_negs = self.unet_k(im_negs)
 #             z_negs = self.global_proj_k(z_negs.squeeze(-1).squeeze(-1))  # 全局负样本
@@ -1031,13 +867,11 @@ class MoCoWithUNet_wolocal(nn.Module):
 #             y_negs = F.normalize(y_negs, dim=1)
 #             y_negs = y_negs.view(b, n_neg, *y_negs.shape[1:])
 
-#         # 全局对比损失
 #         l_pos_global = (z_q * z_k).sum(dim=-1, keepdim=True)
 #         l_neg_global = torch.einsum('bd,bnd->bn', z_q, z_negs)
 #         logits_global = torch.cat([l_pos_global, l_neg_global], dim=1) / self.temperature
 #         labels_global = torch.zeros(logits_global.size(0), dtype=torch.long).cuda()
 
-#         # 局部对比损失
 #         l_pos_local = (y_q * y_k).mean(dim=(1, 2, 3)).unsqueeze(-1)
 #         l_neg_local = torch.einsum('bchw,bnchw->bn', y_q, y_negs) / (h * w)
 #         logits_local = torch.cat([l_pos_local, l_neg_local], dim=1) / self.temperature
@@ -1054,23 +888,19 @@ class MoCoWithUNetShared(nn.Module):
     def __init__(self, shared_base, m=0.999, temperature=1.0, global_cond_channels=64, spatial_cond_channels=16):
         super(MoCoWithUNet, self).__init__()
         
-        self.shared_base = shared_base  # 共享的基网络
+        self.shared_base = shared_base  
         
-        # 定义独立的高层网络 for query encoder
         self.unet_q = HybridConditionModuleHigh(shared_base.out_channels, global_cond_channels, spatial_cond_channels)
         
-        # 定义独立的高层网络 for key encoder
         self.unet_k = HybridConditionModuleHigh(shared_base.out_channels, global_cond_channels, spatial_cond_channels)
         
         self.m = m
         self.temperature = temperature
 
-        # 初始化动量更新
         for param_q, param_k in zip(self.unet_q.parameters(), self.unet_k.parameters()):
             param_k.data.copy_(param_q.data)
             param_k.requires_grad = False
 
-        # 投影头（查询编码器）
         self.global_proj_q = nn.Sequential(
             nn.Linear(global_cond_channels, global_cond_channels),
             nn.ReLU(inplace=True),
@@ -1082,7 +912,6 @@ class MoCoWithUNetShared(nn.Module):
             nn.Conv2d(spatial_cond_channels, spatial_cond_channels, 1),
         )
 
-        # 投影头（关键编码器）
         self.global_proj_k = nn.Sequential(
             nn.Linear(global_cond_channels, global_cond_channels),
             nn.ReLU(inplace=True),
@@ -1096,16 +925,12 @@ class MoCoWithUNetShared(nn.Module):
 
     @torch.no_grad()
     def _momentum_update_key_encoder(self):
-        """
-        动量更新关键编码器
-        """
         for param_q, param_k in zip(self.unet_q.parameters(), self.unet_k.parameters()):
             param_k.data = self.m * param_k.data + (1 - self.m) * param_q.data
 
     def forward(self, im_q, im_k, im_negs):
         b, n_neg, c, h, w = im_negs.shape
 
-        # 查询编码器
         z_q_0, y_q_0 = self.unet_q(im_q)
         z_q = self.global_proj_q(z_q_0.squeeze(-1).squeeze(-1))
         z_q = F.normalize(z_q, dim=1) # b,c
@@ -1115,14 +940,12 @@ class MoCoWithUNetShared(nn.Module):
         with torch.no_grad():
             self._momentum_update_key_encoder()
 
-            # 关键编码器
             z_k, y_k = self.unet_k(im_k)
             z_k = self.global_proj_k(z_k.squeeze(-1).squeeze(-1))
             z_k = F.normalize(z_k, dim=1) # b,c
             y_k = self.local_proj_k(y_k)
             y_k = F.normalize(y_k, dim=1) # b,c,h,w
 
-            # 负样本
             im_negs = im_negs.view(b * n_neg, c, h, w)
             z_negs, y_negs = self.unet_k(im_negs)
             z_negs = self.global_proj_k(z_negs.squeeze(-1).squeeze(-1))  # 全局负样本
@@ -1132,13 +955,11 @@ class MoCoWithUNetShared(nn.Module):
             y_negs = F.normalize(y_negs, dim=1)
             y_negs = y_negs.view(b, n_neg, *y_negs.shape[1:])
 
-        # 全局对比损失
         l_pos_global = (z_q * z_k).sum(dim=-1, keepdim=True)
         l_neg_global = torch.einsum('bd,bnd->bn', z_q, z_negs)
         logits_global = torch.cat([l_pos_global, l_neg_global], dim=1) / self.temperature
         labels_global = torch.zeros(logits_global.size(0), dtype=torch.long).cuda()
 
-        # 局部对比损失
         l_pos_local = (y_q * y_k).mean(dim=(1, 2, 3)).unsqueeze(-1)
         l_neg_local = torch.einsum('bchw,bnchw->bn', y_q, y_negs) / (h * w)
         logits_local = torch.cat([l_pos_local, l_neg_local], dim=1) / self.temperature
