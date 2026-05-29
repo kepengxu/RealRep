@@ -1,0 +1,114 @@
+# python test.py -opt options/test/test_decomix_hdr_fullval.yml
+name: decomix_hdr_fullval
+model_type: ContrastSingleMoCoLatentMixITMModel
+scale: 1
+num_gpu: 1
+gpu_ids: [0]
+manual_seed: 10
+use_bf16: true
+
+datasets:
+  test_1:
+    name: hdrtv1k
+    type: HDRTVDMDATASET_CONTRAST
+    root_dir: ./datasets/HDRTV1K/test_set_ori.lmdb
+    sdrset: 1
+    io_backend: {type: lmdb}
+  test_2:
+    name: hdrtvdm1
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: ./datasets/HDRTV4K/test/test.lmdb
+    sdrset: 1
+    io_backend: {type: lmdb}
+  test_3:
+    name: hdrtvdm2
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: ./datasets/HDRTV4K/test/test.lmdb
+    sdrset: 2
+    io_backend: {type: lmdb}
+  test_4:
+    name: hdrtvdm3
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: ./datasets/HDRTV4K/test/test.lmdb
+    sdrset: 3
+    io_backend: {type: lmdb}
+  test_5:
+    name: hdrtvdm4
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: ./datasets/HDRTV4K/test/test.lmdb
+    sdrset: 4
+    io_backend: {type: lmdb}
+  test_6:
+    name: hdrtvdm5
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: ./datasets/HDRTV4K/test/test.lmdb
+    sdrset: 5
+    io_backend: {type: lmdb}
+  test_7:
+    name: hdrtvdm6
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: ./datasets/HDRTV4K/test/test.lmdb
+    sdrset: 6
+    io_backend: {type: lmdb}
+  test_8:
+    name: hdrtvdm7
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: ./datasets/HDRTV4K/test/test.lmdb
+    sdrset: 7
+    io_backend: {type: lmdb}
+  test_9:
+    name: hdrtvdm8
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: ./datasets/HDRTV4K/test/test.lmdb
+    sdrset: 8
+    io_backend: {type: lmdb}
+
+network_g:
+  type: RealRep_fuse_norm_single
+  in_channels: 3
+  transform_channels: 32
+  global_cond_channels: 64
+  spatial_cond_channels: 16
+
+network_feat:
+  type: MoCoWithUNetDualNegLatentMix
+  m: 0.999
+  temperature: 1.0
+  in_channels: 3
+  global_cond_channels: 64
+  spatial_cond_channels: 16
+  use_alpha_mix: true
+  alpha_mode: beta
+  alpha_beta: 1.0
+  alpha_dominance: rank
+  # true: larger rank -> smaller alpha; false: larger rank -> larger alpha
+  alpha_rank_reverse: true
+  alpha_mix_policy: concat
+
+path:
+  pretrain_network_g: ./experiments/decomix_hdr_main/models/net_g_400000.pth
+  strict_load_g: true
+  param_key_g: params_ema
+  param_key_feat_single_moco_base: feat_params_single_moco_base
+
+val:
+  save_img: true
+  suffix: ~
+  pbar: true
+  metrics:
+    psnr: # metric name, can be arbitrary
+      type: calculate_psnr
+      crop_border: 0
+      test_y_channel: false
+      bit_depth: 16
+    ssim:
+      type: calculate_ssim
+      crop_border: 0
+      test_y_channel: false
+      bit_depth: 16
+    delta_e_itp:
+      type: calculate_delta_e_itp
+      crop_border: 0
+      relative: false
+
+

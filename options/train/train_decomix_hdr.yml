@@ -1,0 +1,277 @@
+# CUDA_VISIBLE_DEVICES=0 python train.py -opt options/train/train_decomix_hdr.yml
+name: decomix_hdr_main
+model_type: ContrastSingleMoCoLatentMixITMModel
+scale: 1
+num_gpu: 1
+gpu_ids: [0]
+manual_seed: 10
+use_bf16: true
+
+datasets:
+  train:
+    name: hdrmixtrain
+    type: HDRTVDMDATASETMIX_UNIFIEDYXY_CONTRAST
+    dataset:
+      hdrtvdm1:
+        name: hdrtvdm1
+        root_dir: ./datasets/HDRTV4K/trainwtiny.lmdb
+        sdrset: 1
+        io_backend: {type: lmdb}
+        neg_rank_luma: 2
+        neg_num_luma: 5
+        neg_rank_window_luma: 1
+        neg_rank_chroma: 2
+        neg_num_chroma: 5
+        neg_rank_window_chroma: 1
+        neg_sample_mode: slice
+        dedup_negatives: true
+      hdrtvdm2:
+        name: hdrtvdm2
+        root_dir: ./datasets/HDRTV4K/trainwtiny.lmdb
+        sdrset: 2
+        io_backend: {type: lmdb}
+        neg_rank_luma: 2
+        neg_num_luma: 5
+        neg_rank_window_luma: 1
+        neg_rank_chroma: 2
+        neg_num_chroma: 5
+        neg_rank_window_chroma: 1
+        neg_sample_mode: slice
+        dedup_negatives: true
+      hdrtvdm3:
+        name: hdrtvdm3
+        root_dir: ./datasets/HDRTV4K/trainwtiny.lmdb
+        sdrset: 3
+        io_backend: {type: lmdb}
+        neg_rank_luma: 2
+        neg_num_luma: 5
+        neg_rank_window_luma: 1
+        neg_rank_chroma: 2
+        neg_num_chroma: 5
+        neg_rank_window_chroma: 1
+        neg_sample_mode: slice
+        dedup_negatives: true
+      hdrtvdm4:
+        name: hdrtvdm4
+        root_dir: ./datasets/HDRTV4K/trainwtiny.lmdb
+        sdrset: 4
+        io_backend: {type: lmdb}
+        neg_rank_luma: 2
+        neg_num_luma: 5
+        neg_rank_window_luma: 1
+        neg_rank_chroma: 2
+        neg_num_chroma: 5
+        neg_rank_window_chroma: 1
+        neg_sample_mode: slice
+        dedup_negatives: true
+      hdrtvdm5:
+        name: hdrtvdm5
+        root_dir: ./datasets/HDRTV4K/trainwtiny.lmdb
+        sdrset: 5
+        io_backend: {type: lmdb}
+        neg_rank_luma: 2
+        neg_num_luma: 5
+        neg_rank_window_luma: 1
+        neg_rank_chroma: 2
+        neg_num_chroma: 5
+        neg_rank_window_chroma: 1
+        neg_sample_mode: slice
+        dedup_negatives: true
+      hdrtvdm6:
+        name: hdrtvdm6
+        root_dir: ./datasets/HDRTV4K/trainwtiny.lmdb
+        sdrset: 6
+        io_backend: {type: lmdb}
+        neg_rank_luma: 2
+        neg_num_luma: 5
+        neg_rank_window_luma: 1
+        neg_rank_chroma: 2
+        neg_num_chroma: 5
+        neg_rank_window_chroma: 1
+        neg_sample_mode: slice
+        dedup_negatives: true
+      hdrtvdm7:
+        name: hdrtvdm7
+        root_dir: ./datasets/HDRTV4K/trainwtiny.lmdb
+        sdrset: 7
+        io_backend: {type: lmdb}
+        neg_rank_luma: 2
+        neg_num_luma: 5
+        neg_rank_window_luma: 1
+        neg_rank_chroma: 2
+        neg_num_chroma: 5
+        neg_rank_window_chroma: 1
+        neg_sample_mode: slice
+        dedup_negatives: true
+      hdrtvdm8:
+        name: hdrtvdm8
+        root_dir: ./datasets/HDRTV4K/trainwtiny.lmdb
+        sdrset: 8
+        io_backend: {type: lmdb}
+        neg_rank_luma: 2
+        neg_num_luma: 5
+        neg_rank_window_luma: 1
+        neg_rank_chroma: 2
+        neg_num_chroma: 5
+        neg_rank_window_chroma: 1
+        neg_sample_mode: slice
+        dedup_negatives: true
+    filename_tmpl: '{}'
+    io_backend:
+      type: lmdb
+    gt_size: false
+    use_hflip: false
+    use_rot: false
+    use_shuffle: true
+    num_worker_per_gpu: 8
+    batch_size_per_gpu: 16
+    pin_memory: true
+    dataset_enlarge_ratio: 1
+    collate_ranked_contrast: true
+    prefetch_mode: ~
+
+  val_hdrtv1k:
+    name: hdrtv1k
+    type: HDRTVDMDATASET_CONTRAST
+    root_dir: ./datasets/HDRTV1K/test_set_ori.lmdb
+    sdrset: 1
+    io_backend: {type: lmdb}
+  val_hdrtvdm1:
+    name: hdrtvdm1
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: ./datasets/HDRTV4K/test/sample/test_sample.lmdb
+    sdrset: 1
+    io_backend: {type: lmdb}
+  val_hdrtvdm2:
+    name: hdrtvdm2
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: ./datasets/HDRTV4K/test/sample/test_sample.lmdb
+    sdrset: 2
+    io_backend: {type: lmdb}
+  val_hdrtvdm3:
+    name: hdrtvdm3
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: ./datasets/HDRTV4K/test/sample/test_sample.lmdb
+    sdrset: 3
+    io_backend: {type: lmdb}
+  val_hdrtvdm4:
+    name: hdrtvdm4
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: ./datasets/HDRTV4K/test/sample/test_sample.lmdb
+    sdrset: 4
+    io_backend: {type: lmdb}
+  val_hdrtvdm5:
+    name: hdrtvdm5
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: ./datasets/HDRTV4K/test/sample/test_sample.lmdb
+    sdrset: 5
+    io_backend: {type: lmdb}
+  val_hdrtvdm6:
+    name: hdrtvdm6
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: ./datasets/HDRTV4K/test/sample/test_sample.lmdb
+    sdrset: 6
+    io_backend: {type: lmdb}
+  val_hdrtvdm7:
+    name: hdrtvdm7
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: ./datasets/HDRTV4K/test/sample/test_sample.lmdb
+    sdrset: 7
+    io_backend: {type: lmdb}
+  val_hdrtvdm8:
+    name: hdrtvdm8
+    type: HDRTVDMDATASET_RGB_CONTRAST
+    root_dir: ./datasets/HDRTV4K/test/sample/test_sample.lmdb
+    sdrset: 8
+    io_backend: {type: lmdb}
+
+network_g:
+  type: RealRep_fuse_norm_single
+  in_channels: 3
+  transform_channels: 32
+  global_cond_channels: 64
+  spatial_cond_channels: 16
+
+network_feat:
+  type: MoCoWithUNetDualNegLatentMix
+  m: 0.999
+  temperature: 1.0
+  in_channels: 3
+  global_cond_channels: 64
+  spatial_cond_channels: 16
+  use_alpha_mix: true
+  alpha_mode: beta
+  alpha_beta: 1.0
+  alpha_dominance: rank
+  # true: larger rank -> smaller alpha; false: larger rank -> larger alpha
+  alpha_rank_reverse: true
+  alpha_mix_policy: concat
+
+path:
+  pretrain_network_g: ~
+  strict_load_g: true
+  resume_state: ~
+
+train:
+  use_bf16: true
+  stage2_init_k: copy_q
+  enable_zero_switch: false
+  ema_decay: 0.999
+  optim_g:
+    type: Adam
+    lr: !!float 2e-4
+    weight_decay: 0
+    betas: [0.9, 0.99]
+
+  scheduler:
+    type: MultiStepLR
+    milestones: [200000, 400000]
+    gamma: 0.5
+
+  total_iter: 400000
+  stage1_iters: 40000
+  warmup_iter: -1
+  latentmix_alpha_schedule_iter: 80000
+  latentmix_alpha_min_early: 0.25
+  latentmix_alpha_max_early: 0.50
+  latentmix_alpha_min_late: 0.25
+  latentmix_alpha_max_late: 0.50
+
+  pixel_opt:
+    type: L1Loss
+    loss_weight: 1.0
+    reduction: mean
+
+  contra_opt:
+    loss_weight: 0.2
+    loss_weight_global: 1.0
+    loss_weight_local: 1.0
+    use_invariance: false
+
+  mid_sup_opt:
+    pixel_opt:
+      type: L1Loss
+      loss_weight: 0.7
+      reduction: mean
+
+val:
+  val_freq: !!float 1e5
+  save_img: true
+  metrics:
+    psnr:
+      type: calculate_psnr
+      crop_border: 0
+      test_y_channel: false
+      bit_depth: 16
+
+logger:
+  print_freq: 100
+  save_checkpoint_freq: !!float 1e4
+  use_tb_logger: true
+  wandb:
+    project: ~
+    resume_id: ~
+
+dist_params:
+  backend: nccl
+  port: 29500

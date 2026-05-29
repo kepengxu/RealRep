@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Environments
+.env
+.venv/
+venv/
+
+# Logs and experiment outputs
+*.log
+tb_logger/
+wandb/
+experiments/
+results/
+
+# Datasets and checkpoints
+datasets/
+*.pth
+*.pt
+*.ckpt
+*.state
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
