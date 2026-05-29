@@ -268,16 +268,7 @@ These numbers are reported for reference and may depend on the exact dataset pre
 
 ## Citation
 
-If you use this code, please cite the corresponding DeCoMix-HDR paper once available.
-
-```bibtex
-@article{decomixhdr,
-  title={DeCoMix-HDR: Degradation-aware Contrastive Mining and Mixing for Generalized SDR-to-HDR Conversion},
-  author={Xu, Kepeng and Wang, Siqi and Xu, Li and Wu, Chang and He, Gang and Yu, Wenxin and Li, Yunsong and Tai, Yu-Wing},
-  journal={IEEE Transactions on Pattern Analysis and Machine Intelligence},
-  year={2026}
-}
-```
+The paper is currently under review. Citation information will be updated after publication.
 
 ## Acknowledgement
 
