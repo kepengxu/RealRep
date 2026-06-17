@@ -5,6 +5,8 @@ Official implementation of **DeCoMix-HDR: Degradation-aware Contrastive Mining a
 DeCoMix-HDR targets generalized SDR-to-HDR conversion under diverse SDR degradation styles. It learns attribute-disentangled degradation representations with luma-/chroma-aware contrastive supervision and uses the learned representation to guide a lightweight degradation-adaptive HDR mapping network.
 
 > The paper link will be added after release.
+>
+> Project page: https://kepengxu.github.io/projects/decomixhdr/
 
 ## Highlights
 
