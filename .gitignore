@@ -18,6 +18,7 @@ tb_logger/
 wandb/
 experiments/
 results/
+options/local/
 
 # Datasets and checkpoints
 datasets/

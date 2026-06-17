@@ -86,7 +86,7 @@ network_feat:
   alpha_mix_policy: concat
 
 path:
-  pretrain_network_g: ./experiments/decomix_hdr_main/models/net_g_400000.pth
+  pretrain_network_g: ./pretrained_models/decomix_hdr_net_g_400000.pth
   strict_load_g: true
   param_key_g: params_ema
   param_key_feat_single_moco_base: feat_params_single_moco_base

@@ -48,6 +48,8 @@ DeCoMix-HDR-open-source/
 ├── test.py                                       # evaluation entry
 ├── requirements.txt
 ├── setup.py
+├── docs/
+│   └── DATASET_ORGANIZATION.md                   # detailed dataset layout guide
 ├── options/
 │   ├── train/
 │   │   └── train_decomix_hdr.yml                 # main training config
@@ -65,6 +67,7 @@ DeCoMix-HDR-open-source/
 │   ├── metrics/
 │   └── utils/
 └── scripts/
+    ├── configure_decomix_data.py                 # dataset symlink/config helper
     ├── dist_train.sh
     ├── dist_test.sh
     ├── data_preparation/
@@ -76,8 +79,8 @@ Some class and file names still contain historical `RealRep` identifiers. They a
 ## Installation
 
 ```bash
-git clone https://github.com/kepengxu/RealRepV2.git
-cd RealRepV2
+git clone https://github.com/kepengxu/RealRep.git
+cd RealRep/DeCoMix-HDR-open-source
 pip install -r requirements.txt
 python setup.py develop
 ```
@@ -122,7 +125,21 @@ The negative-list files are required for luma-/chroma-aware ranked negative mini
 basicsr/data/hdrtvmix_contrast_dataset.py
 ```
 
-Before running training or evaluation, update dataset paths in:
+For the complete LMDB layout, `names.pkl` structure, ranked-negative format, and common troubleshooting notes, see:
+
+```text
+docs/DATASET_ORGANIZATION.md
+```
+
+The quickest setup is to create dataset symlinks and local configs automatically:
+
+```bash
+python scripts/configure_decomix_data.py \
+  --hdrtv4k-root /path/to/HDRTV4K \
+  --hdrtv1k-root /path/to/HDRTV1K
+```
+
+This writes local configs under `options/local/` and verifies the required LMDB and ranked-negative files. If you do not use the helper script, update dataset paths in:
 
 ```text
 options/train/train_decomix_hdr.yml
@@ -185,7 +202,7 @@ experiments/decomix_hdr_main/models/net_g_400000.pth
 
 ## Evaluation
 
-Update the checkpoint path in:
+The released evaluation config loads the checkpoint from `pretrained_models/` by default:
 
 ```text
 options/test/test_decomix_hdr_fullval.yml
@@ -195,7 +212,7 @@ Default checkpoint configuration:
 
 ```yaml
 path:
-  pretrain_network_g: ./experiments/decomix_hdr_main/models/net_g_400000.pth
+  pretrain_network_g: ./pretrained_models/decomix_hdr_net_g_400000.pth
   strict_load_g: true
   param_key_g: params_ema
   param_key_feat_single_moco_base: feat_params_single_moco_base
@@ -263,7 +280,7 @@ These numbers are reported for reference and may depend on the exact dataset pre
 - Keep `collate_ranked_contrast: true` for training with ranked luma/chroma negatives.
 - If negative-list files are missing, the rank-aware contrastive path will not reproduce the intended DeCoMix-HDR behavior.
 - If you train from scratch, keep `pretrain_network_g: ~` and `resume_state: ~` in `train_decomix_hdr.yml`.
-- If you evaluate a released checkpoint, place it at `experiments/decomix_hdr_main/models/net_g_400000.pth` or update `pretrain_network_g` in the test config.
+- If you evaluate a released checkpoint, keep it at `pretrained_models/decomix_hdr_net_g_400000.pth` or update `pretrain_network_g` in the test config.
 - Do not rename historical `RealRep` registry names unless you also update YAML configs and checkpoint keys.
 
 ## Citation
